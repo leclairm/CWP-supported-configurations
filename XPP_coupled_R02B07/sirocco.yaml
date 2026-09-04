@@ -124,16 +124,13 @@ tasks:
   - SIROCCO:
       gpus_per_node: 1
       walltime: 00:05:00
-      # uenv: "sirocco/v0.1.0:2754523216"
-      uenv: "icon/26.7:v1,/capstor/scratch/cscs/leclairm/sirocco_test/sirocco_venv.squashfs:/capstor/scratch/cscs/leclairm/Sirocco_XPP_coupled/.sirocco_venv"
+      uenv: "sirocco/v0.1.0:2819584994"
   - build_and_squash:
       plugin: shell
       partition: tier0
       walltime: 00:30:00
       nodes: 1
-      # path: build
       path: build_exclaim
-      # command: ./build/build_and_squash.sh --uenv="icon/26.7:v1" --squash={PORT::squash} --gitlab-dkrz-token="$(cat ~/.tokens/gitlab_dkrz)" --github-token="$(cat ~/.tokens/github)"
       command: ./build_exclaim/build_and_squash.sh --uenv="icon-dsl/25.12:2454892898" --squash={PORT::squash} --gitlab-dkrz-token="$(cat ~/.tokens/gitlab_dkrz)" --github-token="$(cat ~/.tokens/github)"
   - prepare_input_init:
       plugin: shell
@@ -151,7 +148,6 @@ tasks:
       command: ./prepare_input/prepare_input.sh --icon-input={PORT::icon_input}
   - icon:
       plugin: icon
-      # uenv: "icon/26.7:v1"
       uenv: "icon-dsl/25.12:2454892898"
       view: "default"
       squash_mount: [ICON_MOUNT]
@@ -165,9 +161,7 @@ tasks:
         gpu:
           compute_procs_per_node: 4
           sockets_per_node: 4
-          # path: "ICON_MOUNT/build/santis.gpu.nvhpc/bin/icon"
           path: "ICON_MOUNT/build/santis.gpu.nvhpc.py.substitute/bin/icon"
-          # icon4py_venv: "ICON_MOUNT/externals/icon4py/.venv"
           icon4py_venv: "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/icon4py-0.1.0-x4azhtg3532xd7tqs7dzcbb3igzbrr6e/share/venv"
           procs:
             atmo:
