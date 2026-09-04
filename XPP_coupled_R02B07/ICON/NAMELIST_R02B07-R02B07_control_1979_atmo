@@ -1,0 +1,235 @@
+&coupling_mode_nml
+    coupled_to_ocean = .true.
+/
+
+&parallel_nml
+    p_test_run = .false.
+    l_test_openmp = .false.
+    l_log_checks = .false.
+    iorder_sendrecv = 3
+/
+
+&grid_nml
+    dynamics_parent_grid_id = 0, 1
+    lredgrid_phys = .false.
+    radiation_grid_filename = ' '
+    lfeedback = .false.
+/
+
+&initicon_nml
+    init_mode = 2
+    zpbl1 = 500.0
+    zpbl2 = 1000.0
+    ltile_init = .true.
+    ltile_coldstart = .true.
+/
+
+&run_nml
+    ldynamics = .true.
+    ltransport = .true.
+    iforcing = 3
+    ntracer = 5
+    ltimer = .true.
+    ltestcase = .false.
+    timers_level = 11
+    output = 'nml'
+    check_uuid_gracefully = .true.
+    activate_sync_timers = .true.
+/
+
+&diffusion_nml
+    hdiff_order = 5
+    itype_vn_diffu = 1
+    itype_t_diffu = 2
+    hdiff_efdt_ratio = 32.0
+    hdiff_smag_fac = 0.025
+    lhdiff_vn = .true.
+    lhdiff_temp = .true.
+/
+
+&nwp_phy_nml
+    inwp_gscp = 2
+    inwp_convection = 0
+    inwp_radiation = 4
+    inwp_cldcover = 1
+    inwp_satad = 1
+    inwp_sso = 0
+    inwp_gwd = 0
+    latm_above_top = .false.
+    efdt_min_raylfric = 7200.0
+    itype_z0 = 2
+    icapdcycl = 3
+    icpl_aero_conv = 0
+    icpl_aero_gscp = 0
+    inwp_surface = 2
+    inwp_turb = 6
+    mu_rain = 0.5
+    rain_n0_factor = 0.1
+    ldetrain_conv_prec = .false.
+/
+
+&nwp_tuning_nml
+    itune_albedo = 0
+    tune_gkdrag = 0.075
+    tune_gkwake = 1.5
+    tune_gfrcrit = 0.425
+    tune_box_liq_asy = 3.25
+    tune_rcucov = 0.075
+    tune_rhebc_land = 0.825
+    tune_gust_factor = 7.0
+/
+
+&transport_nml
+    ivadv_tracer = 3, 3, 3, 3, 3, 3
+    itype_hlimit = 4, 4, 4, 4, 4, 4
+    ihadv_tracer = 2, 2, 2, 2, 2, 2
+    itype_vlimit = 1, 1, 1, 1, 1, 1
+    ivlimit_selective = 1, 1, 1, 1, 1, 1
+    llsq_svd = .true.
+/
+
+&interpol_nml
+    nudge_zone_width = 8
+    l_intp_c2l = .true.
+    rbf_scale_mode_ll = 2
+/
+
+&nonhydrostatic_nml
+    iadv_rhotheta = 2
+    ivctype = 2
+    itime_scheme = 4
+    exner_expol = 0.333
+    vwind_offctr = 0.2
+    damp_height = 30000.0
+    rayleigh_coeff = 0.5
+    divdamp_order = 24
+    divdamp_type = 32
+    divdamp_fac = 0.004
+    divdamp_trans_start = 12500
+    divdamp_trans_end = 17500
+    igradp_method = 3
+    l_zdiffu_t = .true.
+    thslp_zdiffu = 0.02
+    thhgtd_zdiffu = 125.0
+    htop_moist_proc = 22500.0
+    hbot_qvsubstep = 16000.0
+/
+
+&sleve_nml
+    top_height = 85000.0
+    min_lay_thckn = 50.0
+    decay_scale_1 = 4000.0
+    decay_scale_2 = 2500.0
+    decay_exp = 1.2
+    htop_thcknlimit = 15000.0
+    stretch_fac = 0.9
+    flat_height = 25000.0
+/
+
+&io_nml
+    lflux_avg = .true.
+    itype_pres_msl = 5
+    itype_rh = 1
+    inextra_3d = 2
+    inextra_2d = 10
+    lnetcdf_flt64_output = .false.
+    precip_interval = 'PT15M'
+    runoff_interval = 'PT3H'
+    maxt_interval = 'PT3H'
+    melt_interval = 'PT3H'
+    lmask_boundary = .true.
+    dt_hailcast = 900.0
+/
+
+&dbg_index_nml
+    idbg_mxmn = 1
+    idbg_val = 0
+    idbg_slev = 1
+    idbg_elev = 3
+/
+
+&extpar_nml
+    itopo = 1
+    n_iter_smooth_topo = 1
+    heightdiff_threshold = 3000.0
+    hgtdiff_max_smooth_topo = 750.0
+    itype_vegetation_cycle = 3
+/
+
+&lnd_nml
+    lprog_albsi = .true.
+    lseaice = .true.
+    hice_min = 0.05
+    hice_max = 10.0
+    sstice_mode = 1
+    ntiles = 1
+/
+
+&turb_vdiff_nml
+    fsl = 0.8
+    pr0 = 1.0
+    f_theta_limit_fraction = 0.1
+    f_theta_decay = 4.0
+    ek_ep_ratio_stable = 2.33
+    ek_ep_ratio_unstable = 1.0
+/
+
+&radiation_nml
+    irad_o3 = 5
+    irad_aero = 12
+    irad_co2 = 2
+    irad_ch4 = 3
+    irad_n2o = 3
+    irad_cfc11 = 2
+    irad_cfc12 = 2
+    irad_o2 = 2
+    vmr_co2 = 0.00041244
+    vmr_ch4 = 1.87872e-06
+    vmr_n2o = 3.3301e-07
+    vmr_o2 = 0.20946
+    vmr_cfc11 = 2.1823e-10
+    vmr_cfc12 = 4.9502e-10
+    albedo_type = 1
+    direct_albedo = 4
+    albedo_whitecap = 1
+    ecrad_data_path = 'ecrad_data'
+    ecrad_isolver = 2
+/
+
+&ccycle_nml
+    ccycle_config%iccycle = 2
+    ccycle_config%ico2conc = 2
+    ccycle_config%vmr_co2 = 0.0003366
+/
+
+&output_nml
+    output_start = "1979-01-01T00:00:00Z"
+    output_end = "2100-01-01T00:00:00Z"
+    filetype = 5
+    output_interval = 'P1D'
+    file_interval = 'P1D'
+    mode = 1
+    operation = 'mean'
+    remap = 0
+    include_last = .false.
+    output_grid = .false.
+    filename_format = 'atm_mon/atm_mon_<datetime2>'
+    ml_varlist = 'tas_gmean', 'rsdt_gmean', 'rsut_gmean', 'rlut_gmean',
+                 'radtop_gmean', 'prec_gmean', 'evap_gmean', 'pme_gmean'
+/
+
+&output_nml
+    output_start = "1979-01-01T00:00:00Z"
+    output_end = "2100-01-01T00:00:00Z"
+    output_interval = 'P1D'
+    file_interval = 'P1D'
+    filetype = 5
+    mode = 1
+    include_last = .false.
+    filename_format = 'atm_mon2d/atm_mon2d_<datetime2>'
+    output_grid = .false.
+    remap = 0
+    operation = 'mean'
+    ml_varlist = 't_2m', 'sp_10m', 'tqc_dia', 'tqi_dia', 't_g', 'qv_2m',
+                 'h_ice', 't_ice'
+/

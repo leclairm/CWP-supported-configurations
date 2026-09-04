@@ -1,0 +1,75 @@
+definitions:
+  atm2oce: &atm2oce
+    src_component: atmo
+    src_grid: icon_atmos_grid
+    tgt_component: ocean
+    tgt_grid: icon_ocean_grid
+    time_reduction: average
+    src_lag: 1
+    tgt_lag: 1
+  oce2atm: &oce2atm
+    src_component: ocean
+    src_grid: icon_ocean_grid
+    tgt_component: atmo
+    tgt_grid: icon_atmos_grid
+    time_reduction: average
+    src_lag: 1
+    tgt_lag: 1
+  interp_stacks:
+    hcsbb_interp_stack: &hcsbb_interp_stack
+      interpolation:
+        - bernstein_bezier
+        - nnn:
+            n: 4
+            weighted: arithmetic_average
+        - fixed:
+            user_value: -999.9
+    conserv_interp_stack: &conserv_interp_stack
+      interpolation:
+        - conservative:
+            order: 1
+            enforced_conservation: false
+            partial_coverage: true
+            normalisation: fracarea
+        - fixed:
+            user_value: -999.9
+    conserv_interp_dest: &conserv_interp_dest
+      interpolation:
+        - conservative:
+            order: 1
+            enforced_conservation: false
+            partial_coverage: true
+            normalisation: destarea
+    spmap_interp_stack: &spmap_interp_stack
+      interpolation:
+        - source_to_target_map:
+            spread_distance: 0.3
+            max_search_distance: 9
+        - fixed:
+            user_value: 0.0
+
+timestep_unit: ISO_format
+calendar: proleptic-gregorian
+coupling:
+  - <<: [ *atm2oce, *hcsbb_interp_stack ]
+    coupling_period: "PT10M"
+    field: [surface_downward_eastward_stress,
+            surface_downward_northward_stress]
+  - <<: [ *atm2oce, *conserv_interp_stack ]
+    coupling_period: "PT10M"
+    field: [surface_fresh_water_flux,
+            total_heat_flux,
+            atmosphere_sea_ice_bundle]
+    #weight_file_name: w_atm2oce.nc
+  - <<: [ *oce2atm, *conserv_interp_stack ]
+    coupling_period: "PT10M"
+    field: [sea_surface_temperature,
+            ocean_sea_ice_bundle]
+    #weight_file_name: w_oce2atm.nc
+  - <<: [ *oce2atm, *conserv_interp_stack ]
+    coupling_period: "PT10M"
+    field: [surface_velocity_bundle]
+    #weight_file_name: w_riv2oce.nc
+  - <<: [ *atm2oce, *spmap_interp_stack ]
+    coupling_period: "PT10M"
+    field: river_runoff

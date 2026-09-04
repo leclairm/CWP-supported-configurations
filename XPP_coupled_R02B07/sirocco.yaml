@@ -1,0 +1,276 @@
+---
+start_date: &root_start_date '1979-01-01T00:00:00'
+stop_date: &root_stop_date '1979-01-05T00:00:00'
+scheduler: slurm
+front_depth: 2
+
+cycles:
+  - init:
+      tasks:
+        # - build_and_squash:
+        #     outputs:
+        #       squash: [icon_squash]
+        - prepare_input_init:
+            inputs:
+              squash: [icon_squash]
+            outputs:
+              # data from basedir
+              ecrad_data: [ecrad_data]
+              cloud_opt_props: [ECHAM6_CldOptProps]
+              rrtmg_lw: [rrtmg_lw]
+              rrtmg_sw: [rrtmg_sw]
+              atmo_grid: [atmo_grid]
+              lctlib_nlct21: [lctlib_nlct21]
+              # Atmosphere input
+              atm_dynamics_grid_file: [atmo_grid]
+              ifs2icon: [analysis_file]
+              bc_solar_sw: [solar_irradiance]
+              # Ocean input
+              ocean_dynamics_grid_file: [ocean_grid]
+              ocean_inistate: [ocean_init_state]
+              # Land input
+              extpar_file: [extpar_file]
+              land_frac: [land_frac] 
+              bc_land_hd: [bc_land_hd] 
+              ic_land_hd: [ic_land_hd] 
+              bc_land_phys: [bc_land_phys] 
+              bc_land_soil: [bc_land_soil] 
+              ic_land_soil: [ic_land_soil] 
+              bc_land_sso: [bc_land_sso]
+  - icon:
+      cycling:
+        start_date: *root_start_date
+        stop_date: *root_stop_date
+        period: P1D
+      tasks:
+        - prepare_input:
+            outputs:
+              icon_input: [icon_link_input]
+            wait_on:
+              - icon:
+                  when:
+                    after: '1979-01-02T00:00:00'
+                  target_cycle:
+                    lag: '-P2D'
+        - icon:
+            components:
+              master:
+                inputs:
+                  squash: [icon_squash]
+                  link_content: [icon_link_input]
+                  link: [lctlib_nlct21]
+              atmo:
+                inputs:
+                  # TODO: ecrad or rrtmg ? => Probably remove rrtmg
+                  ecrad_data: [ecrad_data]
+                  cloud_opt_props: [ECHAM6_CldOptProps]
+                  rrtmg_lw: [rrtmg_lw]
+                  rrtmg_sw: [rrtmg_sw]
+                  dynamics_grid_file: [atmo_grid]
+                  extpar_file: [extpar_file]
+                  ifs2icon: [analysis_file]
+                  bc_solar_sw: [solar_irradiance]
+                  restart_file:
+                    - restart_atm:
+                        when:
+                          after: *root_start_date
+                        target_cycle:
+                          lag: -P1D
+                outputs:
+                  latest_restart_file: [restart_atm]
+                  output_streams: [atm_mon, atm_mon2d]
+              ocean:
+                inputs:
+                  dynamics_grid_file: [ocean_grid]
+                  ocean_inistate: [ocean_init_state]
+                  restart_file:
+                    - restart_ocean:
+                        when:
+                          after: *root_start_date
+                        target_cycle:
+                          lag: -P1D
+                outputs:
+                  latest_restart_file: [restart_ocean]
+                  output_streams: [oce_3h, oce_day]
+              land:
+                inputs:
+                  jsb_ifs: [analysis_file]
+                  jsb_fract: [land_frac]
+                  jsb_hd_bc: [bc_land_hd]
+                  jsb_hd_ic: [ic_land_hd]
+                  jsb_seb_bc: [bc_land_phys]
+                  jsb_seb_ic: [ic_land_soil]
+                  jsb_rad_bc: [bc_land_phys]
+                  jsb_rad_ic: [ic_land_soil]
+                  jsb_turb_bc: [bc_land_phys]
+                  jsb_turb_ic: [ic_land_soil]
+                  jsb_sse_bc: [bc_land_soil]
+                  jsb_sse_ic: [ic_land_soil]
+                  jsb_hydro_bc: [bc_land_soil]
+                  jsb_hydro_ic: [ic_land_soil]
+                  jsb_hydro_bc_sso: [bc_land_sso]
+                  jsb_pheno_bc: [bc_land_phys]
+                  jsb_pheno_ic: [ic_land_soil]
+                  jsb_disturb_bc: [bc_land_phys]
+                  jsb_disturb_ic: [ic_land_soil]
+        - post_proc:
+            inputs:
+              streams: [atm_mon, atm_mon2d, oce_3h, oce_day]
+
+tasks:
+  - ROOT:
+      account: cwd01
+      computer: santis
+  - SIROCCO:
+      gpus_per_node: 1
+      walltime: 00:05:00
+      # uenv: "sirocco/v0.1.0:2754523216"
+      uenv: "icon/26.7:v1,/capstor/scratch/cscs/leclairm/sirocco_test/sirocco_venv.squashfs:/capstor/scratch/cscs/leclairm/Sirocco_XPP_coupled/.sirocco_venv"
+  - build_and_squash:
+      plugin: shell
+      partition: tier0
+      walltime: 00:30:00
+      nodes: 1
+      # path: build
+      path: build_exclaim
+      # command: ./build/build_and_squash.sh --uenv="icon/26.7:v1" --squash={PORT::squash} --gitlab-dkrz-token="$(cat ~/.tokens/gitlab_dkrz)" --github-token="$(cat ~/.tokens/github)"
+      command: ./build_exclaim/build_and_squash.sh --uenv="icon-dsl/25.12:2454892898" --squash={PORT::squash} --gitlab-dkrz-token="$(cat ~/.tokens/gitlab_dkrz)" --github-token="$(cat ~/.tokens/github)"
+  - prepare_input_init:
+      plugin: shell
+      walltime: 00:05:00
+      nodes: 1
+      gpus_per_node: 1
+      path: prepare_input
+      command: ./prepare_input/prepare_input_init.sh --icon-squash={PORT::squash}
+  - prepare_input:
+      plugin: shell
+      walltime: 00:05:00
+      nodes: 1
+      gpus_per_node: 1
+      path: prepare_input
+      command: ./prepare_input/prepare_input.sh --icon-input={PORT::icon_input}
+  - icon:
+      plugin: icon
+      # uenv: "icon/26.7:v1"
+      uenv: "icon-dsl/25.12:2454892898"
+      view: "default"
+      squash_mount: [ICON_MOUNT]
+      partition: tier0
+      walltime: 01:00:00
+      nodes: 4
+      gpus_per_node: 4
+      procs_per_node: 24
+      cores_per_proc: 12
+      exe:
+        gpu:
+          compute_procs_per_node: 4
+          sockets_per_node: 4
+          # path: "ICON_MOUNT/build/santis.gpu.nvhpc/bin/icon"
+          path: "ICON_MOUNT/build/santis.gpu.nvhpc.py.substitute/bin/icon"
+          # icon4py_venv: "ICON_MOUNT/externals/icon4py/.venv"
+          icon4py_venv: "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/icon4py-0.1.0-x4azhtg3532xd7tqs7dzcbb3igzbrr6e/share/venv"
+          procs:
+            atmo:
+              compute_weight: 1
+              streams: 2
+        cpu:
+          sockets_per_node: 4
+          path: "ICON_MOUNT/build/santis.cpu.nvhpc/bin/icon"
+          procs:
+            ocean:
+              compute_weight: 1
+              streams: 2
+      runtime: ICON/runtime
+      namelists:
+        - ./ICON/icon_master.namelist
+        - ./ICON/NAMELIST_R02B07-R02B07_control_1979_atmo:
+            parallel_nml:
+              nblocks_e: 1
+              nproma_sub: 10469
+              io_proc_chunk_size: 12
+            run_nml:
+              modelTimeStep: "PT20S"
+              num_lev: 120
+              msg_level: 10
+            io_nml:
+              restart_write_mode: "joint procs multifile"
+            nwp_phy_nml:
+              dt_rad: 600
+              dt_conv: 20
+              dt_sso: 20
+              dt_gwd: 20
+            radiation_nml:
+              ecrad_isolver: 2
+        - ./ICON/NAMELIST_R02B07-R02B07_control_1979_ocean:
+            parallel_nml:
+              nproma: 16
+            run_nml:
+              modelTimeStep: "PT2M"
+        - ./ICON/NAMELIST_R02B07-R02B07_control_1979_land
+      yac_coupling: "ICON/coupling.yaml"
+  - post_proc:
+      plugin: shell
+      gpus_per_node: 1
+      path: post_proc
+      command: "uenv run climtools --view climtools -- ./post_proc/post_proc.sh {PORT::streams}"
+
+data:
+  available:
+    - icon_squash:
+        path: "/capstor/scratch/cscs/leclairm/XPP_icon-exclaim.squashfs"
+  generated:
+    # Move it to available (with absolute path of course) if not building
+    # - icon_squash:
+    #     path: "XPP_icon.squashfs"
+    # Basedir input
+    - rrtmg_lw:
+        path: "icon_basedir/data/rrtmg_lw.nc"
+    - rrtmg_sw:
+        path: "icon_basedir/data/rrtmg_sw.nc"
+    - ECHAM6_CldOptProps:
+        path: "icon_basedir/data/ECHAM6_CldOptProps.nc"
+    - dmin_wetgrowth:
+        path: "icon_basedir/data/dmin_wetgrowth_lookup.nc"
+    - ecrad_data:
+        path: "icon_basedir/externals/ecrad/data"
+    - lctlib_nlct21:
+        path: "icon_basedir/externals/jsbach/data/lctlib_nlct21.def"
+    # Atmosphere input
+    - atmo_grid:
+        path: "atmo_grid.nc"
+    - analysis_file:
+        path: "ifs2icon.nc"
+    - solar_irradiance:
+        path: "bc_solar_irradiance.nc"
+    # Ocean input
+    - ocean_grid:
+        path: "ocean_grid.nc"
+    - ocean_init_state:
+        path: "ocean_init_state.nc"
+    # Land input
+    - extpar_file:
+        path: "extpar_file.nc"
+    - land_frac:
+        path: "land_frac.nc"
+    - bc_land_hd:
+        path: "bc_land_hd.nc"
+    - ic_land_hd:
+        path: "ic_land_hd.nc"
+    - bc_land_phys:
+        path: "bc_land_phys.nc"
+    - bc_land_soil:
+        path: "bc_land_soil.nc"
+    - ic_land_soil:
+        path: "ic_land_soil.nc"
+    - bc_land_sso:
+        path:  "bc_land_sso.nc"
+    - icon_link_input:
+        path: 'icon_input'
+    # Restart
+    - restart_atm: {}
+    - restart_ocean: {}
+    # Output streams
+    - atm_mon: {}
+    - atm_mon2d: {}
+    - oce_3h: {}
+    - oce_day: {}

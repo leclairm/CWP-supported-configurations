@@ -1,0 +1,61 @@
+&jsb_model_nml
+    usecase = 'jsbach_pfts'
+    npft = 11
+    use_lakes = .true.
+    init_from_ifs = .false.
+/
+
+&jsb_rad_nml
+    use_alb_veg_simple = .false.
+/
+
+&jsb_sse_nml
+    l_heat_cap_map = .false.
+    l_heat_cond_map = .false.
+    l_heat_cap_dyn = .true.
+    l_heat_cond_dyn = .true.
+    ! l_snow = .true. => seems to be gone in master
+    l_dynsnow = .true.
+    l_freeze = .true.
+    l_supercool = .true.
+/
+
+&jsb_hydro_nml
+    l_organic = .false.
+    l_read_initial_moist = .true.
+/
+
+&jsb_assimi_nml
+    active = .true.
+/
+
+&jsb_pheno_nml
+    active = .true.
+    scheme = 'logrop'
+/
+
+&jsb_carbon_nml
+    active = .true.
+/
+
+&jsb_fuel_nml
+    active = .false.
+    fuel_algorithm = 1
+/
+
+&jsb_disturb_nml
+    active = .false.
+    fire_algorithm = 1
+    windbreak_algorithm = 1
+    lburn_pasture = .false.
+/
+
+&jsb_hd_nml
+    active = .true.
+    routing_scheme = 'full'
+    diag_water_budget = .false.
+    debug_hd = .false.
+    enforce_water_budget = 'error'
+    read_initial_reservoirs = .true.
+    use_bifurcated_rivers = .true.
+/

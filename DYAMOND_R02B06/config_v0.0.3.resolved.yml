@@ -1,0 +1,169 @@
+---
+start_date: &root_start_date '2020-01-20T00:00:00'
+six_hourly_start_date: &six_hourly_start_date '2020-01-20T03:00:00'
+stop_date: &root_stop_date '2020-01-21T21:00:00'
+scheduler: slurm
+front_depth: 2
+cycles:
+  - first icon:
+      cycling:
+        start_date: *root_start_date
+        stop_date: *six_hourly_start_date
+        period: PT3H  # Should be automatically computed for a single cycle => feedback
+      tasks:
+        - prepare_input:
+            inputs:
+              data_pool: [tmp_data_pool]
+              sst_ice_dir: [sst_ice_dir]
+              ozone_dir: [ozone_dir]
+              aero_kine_dir: [aero_kine_dir]
+            outputs:
+              icon_input: [icon_link_input]
+        - icon:
+            components:
+              master:
+                inputs:
+                  link_content: [icon_link_input]
+              atmo:
+                inputs:
+                  ecrad_data: [ecrad_data]
+                  cloud_opt_props: [ECHAM6_CldOptProps]
+                  rrtmg_lw: [rrtmg_lw]
+                  dynamics_grid_file: [icon_grid]
+                  extpar_file: [extpar_file]
+                  ifs2icon: [analysis_file]
+                outputs:
+                  latest_restart_file: [first_restart]
+                  # output streams have to be specified even if unsued
+                  output_streams: [stream_1, stream_2]
+  - icon six hourly:
+      cycling:
+        start_date: *six_hourly_start_date
+        stop_date: *root_stop_date
+        period: PT6H
+      tasks:
+        - prepare_input:
+            inputs:
+              data_pool: [tmp_data_pool]
+              sst_ice_dir: [sst_ice_dir]
+              ozone_dir: [ozone_dir]
+              aero_kine_dir: [aero_kine_dir]
+            outputs:
+              icon_input: [icon_link_input]
+            wait_on:
+              - icon:
+                  when:
+                    after: '2020-01-20T09:00:00'
+                  target_cycle:
+                    lag: '-PT12H'
+        - icon:
+            components:
+              master:
+                inputs:
+                  link_content: [icon_link_input]
+              atmo:
+                inputs:
+                  ecrad_data: [ecrad_data]
+                  cloud_opt_props: [ECHAM6_CldOptProps]
+                  rrtmg_lw: [rrtmg_lw]
+                  dynamics_grid_file: [icon_grid]
+                  extpar_file: [extpar_file]
+                  ifs2icon: [analysis_file]
+                  restart_file:
+                    - first_restart:
+                        when:
+                          at: *six_hourly_start_date
+                        target_cycle:
+                          lag: -PT3H
+                    - restart_six_hourly:
+                        when:
+                          after: *six_hourly_start_date
+                        target_cycle:
+                          lag: -PT6H
+                outputs:
+                  latest_restart_file: [restart_six_hourly]
+                  output_streams: [stream_1, stream_2]
+        - post_proc:
+            inputs:
+              stream: [stream_1, stream_2]
+tasks:
+  - ROOT:
+      account: cwd01
+      computer: santis
+      partition: tier0
+  - SIROCCO:
+      walltime: 00:05:00
+      # uenv: /capstor/store/cscs/userlab/cws01/uenvs/sirocco_v0.0.3.sqfs
+      uenv: "/capstor/store/cscs/userlab/cws01/uenvs/sirocco_v0.0.3.sqfs,/capstor/scratch/cscs/leclairm/sirocco_test/venv.squashfs:${PWD}/.sirocco_venv"
+      # view: sirocco
+      # venv: /user-tools/sirocco_venv/bin/activate
+      
+  - prepare_input:
+      plugin: shell
+      walltime: 00:05:00
+      nodes: 1
+      path: prepare_input.sh
+      command: ./prepare_input.sh --pool={PORT::data_pool} --sst-ice={PORT::sst_ice_dir} --ozone={PORT::ozone_dir} --aero-kine={PORT::aero_kine_dir} --icon-input={PORT::icon_input}
+  - icon:
+      plugin: icon
+      uenv: icon/25.2:v3
+      walltime: 00:10:00
+      nodes: 2
+      procs_per_node: 144
+      namelists:
+        - ./ICON/icon_master.namelist
+        - ./ICON/NAMELIST_DYAMOND_R02B06L120:
+            radiation_nml:
+              ecrad_isolver: 2  # 0 for cpu, 2 for gpu
+      exe:
+        separate_io: False
+        procs_per_io_node: 4
+        # gpu:
+        #   path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_gpu_25.2-v3/bin/icon
+        #   compute_procs_per_node: 4
+        #   sockets_per_node: 4
+        #   procs:
+        #     atmo:
+        #       compute_weight: 1
+        #       streams: 1
+        cpu:
+          path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_cpu_25.2-v3/bin/icon
+          sockets_per_node: 4
+          procs:
+            atmo:
+              compute_weight: 1
+              streams: 2
+  - post_proc:
+      plugin: shell
+      computer: santis
+      path: post_proc.sh
+      command: "uenv run /capstor/store/cscs/userlab/cws01/uenvs/climtools_25.2_v2.sqfs --view default -- post_proc.sh {PORT::stream}"
+data:
+  available:
+     - icon_grid:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/icon_grid_0021_R02B06_G.nc
+     - analysis_file:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/initial_conditions/ifs2icon_2020012000_0021_R02B06_G.nc
+     - sst_ice_dir:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/sst_and_seaice/r0001
+     - ozone_dir:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/ozone/r0001
+     - aero_kine_dir:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/aerosol_kinne/r0001
+     - extpar_file:
+         path: /capstor/store/cscs/exclaim/excp01/ppothapa/data_from_santis/grids/MPI_grids/atmo/R02B06/external_parameter/external_parameter_icon_0021_R02B06_G_tiles.nc
+     - rrtmg_lw:
+         path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_cpu_25.2-v3/data/rrtmg_lw.nc
+     - ECHAM6_CldOptProps:
+         path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_cpu_25.2-v3/data/ECHAM6_CldOptProps.nc
+     - ecrad_data:
+         path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_cpu_25.2-v3/externals/ecrad/data
+     - tmp_data_pool:
+         path: /capstor/scratch/cscs/${USER}/DYAMOND_R02B06_input
+  generated:
+     - icon_link_input:
+         path: 'icon_input'
+     - stream_1: {}
+     - stream_2: {}
+     - first_restart: {}
+     - restart_six_hourly: {}

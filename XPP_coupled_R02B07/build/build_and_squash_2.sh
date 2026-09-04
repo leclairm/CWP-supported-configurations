@@ -1,0 +1,248 @@
+#!/usr/bin/bash
+
+set -e
+
+
+# ========================================
+# Init
+# ========================================
+
+# Help
+# ----
+help_msg(){
+    echo
+    echo "Build multiple out-of-source targets asynchronously and squash the icon directory."
+    echo "Targets are beeing built in \`build/TARGET_NAME\`"
+    echo
+    echo "Usage:"
+    echo "$0 [required arguments] [optional arguments]"
+    echo
+    echo "required arguments"
+    echo
+    echo "optional arguments"
+    echo "  --repo=ICON_REPO               icon git repository, default: git@gitlab.dkrz.de:icon/icon-nwp.git"
+    echo "  --branch=ICON_BRANCH           branch of ICON_REPO, default: master"
+    echo "  --squash=SQUASHED_FILE         squashed path for the icon directory,"
+    echo "                                 default: in current directory, filename inferred from ICON_REPO and ICON_BRANCH"
+    echo "  --targets=TARGET1,...          comma separated list of build targets,"
+    echo "                                 default: santis.cpu.nvhpc,santis.gpu.nvhpc,santis.icon4py.nvhpc"
+    echo "  --gitlab-dkrz-token TOKEN      clone from gitlab.dkrz.de with TOKEN instead of ssh"
+    echo "  --github-token TOKEN           clone from github.com with TOKEN instead of ssh"
+}
+
+# Set defaults
+# ------------
+# Required args
+
+# Optional args
+icon_repo="git@gitlab.dkrz.de:icon/icon-nwp.git"
+icon_branch="master"
+squashed_icon_path=""
+build_targets=("santis.cpu.nvhpc" "santis.gpu.nvhpc" "santis.icon4py.nvhpc")
+gitlab_dkrz_token=""
+github_token=""
+
+# Parse CLI args
+# --------------
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --repo=*) icon_repo="${1#*=}"; shift 1;;
+        --branch=*) icon_branch="${1#*=}"; shift 1;;
+        --squash=*) squashed_icon_path="$(realpath ${1#*=})"; shift 1;;
+        --targets=*)
+            IFS=',' read -ra build_targets <<< "${1#*=}"
+            shift 1
+            ;;
+        --gitlab-dkrz-token=*) gitlab_dkrz_token="${1#*=}"; shift 1;;
+        --github-token=*) github_token="${1#*=}"; shift 1;;
+        --help) help_msg; exit 0;;
+        *)
+            help_msg
+            echo "ERROR: unrecognized argument: $1" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Check required args
+# -------------------
+required_vars=()
+required_opts=()
+for ((k=0; k<${#required_vars[@]}; k++)); do
+    var_name=${required_vars[k]}
+    opt_name=${required_opts[k]}
+    if [ -z ${!var_name} ]; then
+        help_msg
+        echo
+        echo "ERROR: required option ${opt_name} not provided"
+        exit 1
+    fi
+done
+
+# Clone with tokens
+# -----------------
+k=0
+if [ -n "${gitlab_dkrz_token}" ]; then
+    eval "GIT_CONFIG_KEY_${k}=\"url.https://oauth2:${gitlab_dkrz_token}@gitlab.dkrz.de/.insteadOf\""
+    eval "GIT_CONFIG_VALUE_${k}=\"git@gitlab.dkrz.de:\""
+    (( k += 1 ))
+fi
+if [ -n "${github_token}" ]; then
+    eval "GIT_CONFIG_KEY_${k}=\"url.https://oauth2:${github_token}@github.com/.insteadOf\""
+    eval "GIT_CONFIG_VALUE_${k}=\"git@github.com:\""
+    (( k += 1 ))
+fi
+(( k > 0 )) &&  GIT_CONFIG_COUNT=${k}
+
+# Build dir
+# ---------
+build_dir="/dev/shm/${USER}/build_and_squash_icon"
+
+# Helper functions
+# ----------------
+elapsed_since(){
+    local seconds=$(( $(date +%s) - $1 ))
+    printf '%02d:%02d:%02d\n' $((seconds/3600)) $((seconds%3600/60)) $((seconds%60))
+}
+
+# Workaround for ignoring CC and CXX from the sirocco uenv
+unset CC
+unset CXX
+
+# ========================================
+# Start
+# ========================================
+
+overall_start=$(date +%s)
+echo "[build_and_squash] ... Building ICON in ${build_dir}"
+
+rm -rf "${build_dir}"
+mkdir -p "${build_dir}"
+original_dir="$(pwd)"
+pushd "${build_dir}" >/dev/null 2>&1
+
+
+# ========================================
+# Get ICON
+# ========================================
+
+start=$(date +%s)
+echo "[build_and_squash] ... Getting ICON"
+
+icon_name=$(basename ${icon_repo})
+icon_name=${icon_name%%.git}
+icon_dirname="${icon_name}_${icon_branch}"
+
+git clone --depth 1 --recurse-submodules --shallow-submodules -b "${icon_branch}" "${icon_repo}" "${icon_dirname}"
+
+echo "[build_and_squash] ... Getting ICON => done in $(elapsed_since ${start})"
+
+pushd "${icon_dirname}" >/dev/null 2>&1
+
+# ========================================
+# Adapt build specs
+# ========================================
+
+for spack_env in ${original_dir}/build/spack/*; do
+    variant="$(basename ${spack_env})"
+    rsync -av "${spack_env}/" "./config/cscs/spack/${variant}/" 
+done
+
+
+# ========================================
+# Build
+# ========================================
+
+
+all_build_start=$(date +%s)
+echo "[build_and_squash] ... Building ICON"
+
+# Build all santis targets in parallel
+# WARNING: Without changes to santis.xxx.nvhpc, it requires n_targets x 72 processes
+#          so building on the shared partition using a single socket could fail or
+#          just be slow because sequential
+
+# Avoid race condition when cloning spack-c2sm for each build
+start=$(date +%s)
+echo "[build_and_squash] ...... Getting sapck-c2sm and spack"
+sapck_c2sm_version="$(cat config/cscs/SPACK_TAG_SANTIS)"
+git clone --depth 1 --recurse-submodules --shallow-submodules -b "${sapck_c2sm_version}" https://github.com/C2SM/spack-c2sm.git spack-c2sm
+echo "[build_and_squash] ...... Getting sapck-c2sm and spack => done in $(elapsed_since ${start})"
+
+build_start=$(date +%s)
+declare -A install_pids
+
+# Launching async builds in the background
+for build_target in ${build_targets[@]}; do
+    build_dir="build/${build_target}"
+    log="build.${build_target}.${SLURM_JOB_ID}.o"
+    echo "[build_and_squash] ...... Launchng build ${build_target} => log at ${log}"
+    mkdir -p ${build_dir}
+    pushd ${build_dir} >/dev/null 2>&1
+    time ../../config/cscs/${build_target} > "${original_dir}/${log}" 2>&1 &
+    install_pids[${build_target}]="$!"
+    popd >/dev/null 2>&1
+done
+
+# Waiting for build processes to complete
+# NOTE: That can be simplified with a recent version of bash using `wait -n -p PID`
+while (( ${#install_pids[@]} )); do
+    for build_target in "${!install_pids[@]}"; do
+        pid="${install_pids[${build_target}]}"
+        if ! kill -0 "${pid}" 2>/dev/null; then # kill -0 checks for process existance
+            # we know this pid has exited; retrieve its exit status
+            if ! wait "${pid}"; then
+                echo "ERROR: build ${build_target} failed"
+                exit 1
+            else
+                echo "[build_and_squash] ...... Build ${build_target} => done in $(elapsed_since ${build_start})"
+            fi
+            unset "install_pids[${build_target}]"
+        fi
+    done
+    sleep 1
+done
+
+echo "[build_and_squash] ... Building => done in $(elapsed_since ${all_build_start})"
+
+uenv status --format=views > ./UENV_STATUS
+
+popd >/dev/null 2>&1
+
+
+# ========================================
+# Squash
+# ========================================
+
+start=$(date +%s)
+icon_squash_dev=$(realpath "./icon.squashfs")
+echo "[build_and_squash] ... Squashing"
+mksquashfs "${icon_dirname}" "${icon_squash_dev}" -no-recovery -noappend -Xcompression-level 3 || exit
+echo "[build_and_squash] ... Squashing => done in $(elapsed_since ${start})"
+
+
+# ========================================
+# Retrieve squashed file
+# ========================================
+
+start=$(date +%s)
+squashed_icon_path=${squashed_icon_path:-"${original_dir}/${icon_dirname}.squashfs"}
+echo "[build_and_squash] ... Retrieving squash"
+rsync -av "${icon_squash_dev}" "${squashed_icon_path}"
+echo "[build_and_squash] ... Retrieving squash => done in $(elapsed_since ${start})"
+
+
+# ========================================
+# Accounting
+# ========================================
+
+sacct -j "${SLURM_JOB_ID}" --format "JobID, JobName, AllocCPUs, Elapsed, ElapsedRaw, CPUTimeRAW, ConsumedEnergyRaw, MaxRSS, MaxVMSize, AveRSS"
+
+
+# ========================================
+# End
+# ========================================
+
+popd >/dev/null 2>&1
+
+echo "[build_and_squash] ... build and squash complete in $(elapsed_since ${overall_start})"

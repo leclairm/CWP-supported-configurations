@@ -1,0 +1,62 @@
+diff --git a/src/atm_dyn_iconam/mo_nh_stepping.f90 b/src/atm_dyn_iconam/mo_nh_stepping.f90
+index 5dc1ef23d5..bd62e04f6e 100644
+--- a/src/atm_dyn_iconam/mo_nh_stepping.f90
++++ b/src/atm_dyn_iconam/mo_nh_stepping.f90
+@@ -694,8 +694,9 @@ MODULE mo_nh_stepping
+       IF(iforcing .EQ. inwp) THEN
+         IF (ltimer) CALL timer_start(timer_coupling)
+ #ifdef _OPENACC
+-        CALL finish('mo_nh_interface_nwp', 'nwp_couple_ocean is not &
+-        & available on GPU')
++        IF (atm_phy_nwp_config(1)%inwp_turb /= ivdiff) THEN
++          CALL finish('mo_nh_interface_nwp', 'nwp_couple_ocean is not available on GPU')
++        ENDIF
+ #endif
+         CALL nwp_seaice(p_patch(1), p_nh_state(1)%diag, prm_diag(1), &
+         &             p_lnd_state(1)%prog_wtr(nnow(1)), &
+diff --git a/src/lnd_phy_nwp/mo_nwp_sfc_interface.f90 b/src/lnd_phy_nwp/mo_nwp_sfc_interface.f90
+index df32244649..7a28ad0f9c 100644
+--- a/src/lnd_phy_nwp/mo_nwp_sfc_interface.f90
++++ b/src/lnd_phy_nwp/mo_nwp_sfc_interface.f90
+@@ -22,7 +22,7 @@ MODULE mo_nwp_sfc_interface
+   USE mo_kind,                ONLY: dp, wp
+   USE mo_exception,           ONLY: message, message_text, finish
+   USE mo_model_domain,        ONLY: t_patch
+-  USE mo_impl_constants,      ONLY: min_rlcell_int, icosmo, itkesv, max_dom
++  USE mo_impl_constants,      ONLY: min_rlcell_int, icosmo, itkesv, max_dom, ivdiff
+   USE mo_impl_constants_grf,  ONLY: grf_bdywidth_c
+   USE mo_loopindices,         ONLY: get_indices_c
+   USE mo_ext_data_types,      ONLY: t_external_data
+@@ -1986,6 +1986,7 @@ CONTAINS
+     ! Local scalars:
+     !
+     INTEGER :: jc, jb, ic              !loop indices
++    INTEGER :: jg
+     INTEGER :: i_count
+     LOGICAL :: lis_coupled_run   !< TRUE for coupled ocean-atmosphere runs (copy for ACC vectorisation)
+ 
+@@ -2087,7 +2088,10 @@ CONTAINS
+ 
+       IF (lis_coupled_run) THEN
+ #ifdef _OPENACC
+-        CALL finish('mo_nwp_sfc_interface', 'A-O coupling in nwp_seaice is not available on GPU')
++        jg = p_patch%id
++        IF (atm_phy_nwp_config(jg)%inwp_turb /= ivdiff) THEN
++          CALL finish('mo_nwp_sfc_interface', 'A-O coupling in nwp_seaice is not available on GPU')
++        ENDIF
+ #endif
+         !  set conductive heat flux to zero outside list_seaice,
+         !  may be used by ocean (e.g. through interpolation)
+diff --git a/src/lnd_phy_nwp/mo_nwp_sfc_utils.f90 b/src/lnd_phy_nwp/mo_nwp_sfc_utils.f90
+index 77f67241f9..3a55bd8597 100644
+--- a/src/lnd_phy_nwp/mo_nwp_sfc_utils.f90
++++ b/src/lnd_phy_nwp/mo_nwp_sfc_utils.f90
+@@ -2517,7 +2517,7 @@ CONTAINS
+ 
+     IF ( ntiles_total == 1 ) THEN  ! no tile approach
+ #ifdef _OPENACC
+-      CALL finish('update_idx_lists_sea', "The code path without tiling is not tested on GPU")
++      ! CALL finish('update_idx_lists_sea', "The code path without tiling is not tested on GPU")
+ #endif
+       !$ACC PARALLEL ASYNC(1) DEFAULT(PRESENT)
+ !$NEC ivdep
