@@ -163,6 +163,7 @@ tasks:
           sockets_per_node: 4
           path: "ICON_MOUNT/build/santis.gpu.nvhpc.py.substitute/bin/icon"
           icon4py_venv: "/user-environment/linux-sles15-neoverse_v2/gcc-13.3.0/icon4py-0.1.0-x4azhtg3532xd7tqs7dzcbb3igzbrr6e/share/venv"
+          gt4py_build_cache_dir: "../.."
           procs:
             atmo:
               compute_weight: 1
