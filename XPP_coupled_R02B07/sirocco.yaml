@@ -174,7 +174,6 @@ tasks:
             ocean:
               compute_weight: 1
               streams: 2
-      runtime: ICON/runtime
       namelists:
         - ./ICON/icon_master.namelist
         - ./ICON/NAMELIST_R02B07-R02B07_control_1979_atmo:
