@@ -121,13 +121,13 @@ tasks:
   - ROOT:
       account: cwd01
       computer: santis
+      partition: normal
   - SIROCCO:
       gpus_per_node: 1
       walltime: 00:05:00
       uenv: "sirocco/v0.1.0:2819584994"
   - build_and_squash:
       plugin: shell
-      partition: tier0
       walltime: 00:30:00
       nodes: 1
       path: build_exclaim

@@ -99,8 +99,6 @@ tasks:
       gpus_per_node: 1
       walltime: 00:05:00
       uenv: "sirocco/v0.1.0:2819584994"
-      # uenv: "sirocco/v0.1.0:2819584994,/capstor/scratch/cscs/leclairm/sirocco_test/sirocco_venv.squashfs:/capstor/scratch/cscs/leclairm/Sirocco_DYAMOND/.sirocco_venv"
-      # venv: /capstor/scratch/cscs/leclairm/Sirocco_DYAMOND/.sirocco_venv
   - prepare_input:
       plugin: shell
       gpus_per_node: 1
