@@ -7,7 +7,7 @@ No official support, just giving access to early users.
 Current sirocco uenv
 
 ``` shell
-uenv image pull build::sirocco/v0.1.0:2840472201
+uenv image pull build::sirocco/v0.1.0:2840552485
 ```
 
 ## Usage
