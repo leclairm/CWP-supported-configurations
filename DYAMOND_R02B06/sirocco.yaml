@@ -98,7 +98,7 @@ tasks:
   - SIROCCO:
       gpus_per_node: 1
       walltime: 00:05:00
-      uenv: "sirocco/v0.1.0:2819584994"
+      uenv: "sirocco/v0.1.0"
   - prepare_input:
       plugin: shell
       gpus_per_node: 1
