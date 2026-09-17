@@ -7,7 +7,8 @@ No official support, just giving access to early users.
 Current sirocco uenv
 
 ``` shell
-uenv image pull build::sirocco/v0.1.0:2846276226
+last_sirocco_uenv=$(uenv image find build::sirocco/v0.1.0 --format "{name}/{version}:{tag}"| tail -n 1)
+uenv image pull build::${last_sirocco_uenv}
 ```
 
 ## Usage
