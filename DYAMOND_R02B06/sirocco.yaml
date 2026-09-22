@@ -115,7 +115,7 @@ tasks:
       walltime: 00:10:00
       # Max procs_per_node = 101
       nodes: 2
-      gpus_per_node: 4
+      sockets_per_node: 4
       # procs_per_node: 200
       namelists:
         - ./ICON/icon_master.namelist
@@ -129,7 +129,6 @@ tasks:
           # path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_gpu_25.2-v3/bin/icon
           path: "ICON_MOUNT/build/santis.gpu.nvhpc/bin/icon"
           compute_procs_per_node: 4
-          sockets_per_node: 4
           procs:
             atmo:
               compute_weight: 1
@@ -137,7 +136,6 @@ tasks:
         # cpu:
         #   # path: /capstor/store/cscs/userlab/cwd01/leclairm/archive_icon_build/icon-nwp_cpu_25.2-v3/bin/icon
         #   path: "ICON_MOUNT/build/santis.cpu.nvhpc/bin/icon"
-        #   sockets_per_node: 4
         #   procs:
         #     atmo:
         #       compute_weight: 1
