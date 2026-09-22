@@ -96,12 +96,12 @@ tasks:
       computer: santis
       partition: normal
   - SIROCCO:
-      gpus_per_node: 1
+      sockets_per_node: 1
       walltime: 00:05:00
       uenv: "sirocco/v0.1.0"
   - prepare_input:
       plugin: shell
-      gpus_per_node: 1
+      sockets_per_node: 1
       walltime: 00:05:00
       nodes: 1
       path: prepare_input.sh
@@ -142,7 +142,7 @@ tasks:
         #       streams: 2
   - post_proc:
       plugin: shell
-      gpus_per_node: 1
+      sockets_per_node: 1
       computer: santis
       path: post_proc.sh
       command: "uenv run /capstor/store/cscs/userlab/cws01/uenvs/climtools_25.2_v2.sqfs --view default -- post_proc.sh {PORT::stream}"

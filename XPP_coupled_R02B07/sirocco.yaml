@@ -123,7 +123,7 @@ tasks:
       computer: santis
       partition: normal
   - SIROCCO:
-      gpus_per_node: 1
+      sockets_per_node: 1
       walltime: 00:05:00
       uenv: "sirocco/v0.1.0"
   - build_and_squash:
@@ -136,14 +136,14 @@ tasks:
       plugin: shell
       walltime: 00:05:00
       nodes: 1
-      gpus_per_node: 1
+      sockets_per_node: 1
       path: prepare_input
       command: ./prepare_input/prepare_input_init.sh --icon-squash={PORT::squash}
   - prepare_input:
       plugin: shell
       walltime: 00:05:00
       nodes: 1
-      gpus_per_node: 1
+      sockets_per_node: 1
       path: prepare_input
       command: ./prepare_input/prepare_input.sh --icon-input={PORT::icon_input}
   - icon:
@@ -202,7 +202,7 @@ tasks:
       yac_coupling: "ICON/coupling.yaml"
   - post_proc:
       plugin: shell
-      gpus_per_node: 1
+      sockets_per_node: 1
       path: post_proc
       command: "uenv run climtools --view climtools -- ./post_proc/post_proc.sh {PORT::streams}"
 
