@@ -130,21 +130,21 @@ tasks:
       plugin: shell
       walltime: 00:30:00
       nodes: 1
-      path: build_exclaim
+      src: build_exclaim
       command: ./build_exclaim/build_and_squash.sh --uenv="icon-dsl/25.12:2454892898" --squash={PORT::squash} --gitlab-dkrz-token="$(cat ~/.tokens/gitlab_dkrz)" --github-token="$(cat ~/.tokens/github)"
   - prepare_input_init:
       plugin: shell
       walltime: 00:05:00
       nodes: 1
       sockets_per_node: 1
-      path: prepare_input
+      src: prepare_input
       command: ./prepare_input/prepare_input_init.sh --icon-squash={PORT::squash}
   - prepare_input:
       plugin: shell
       walltime: 00:05:00
       nodes: 1
       sockets_per_node: 1
-      path: prepare_input
+      src: prepare_input
       command: ./prepare_input/prepare_input.sh --icon-input={PORT::icon_input}
   - icon:
       plugin: icon
@@ -203,7 +203,7 @@ tasks:
   - post_proc:
       plugin: shell
       sockets_per_node: 1
-      path: post_proc
+      src: post_proc
       command: "uenv run climtools --view climtools -- ./post_proc/post_proc.sh {PORT::streams}"
 
 data:

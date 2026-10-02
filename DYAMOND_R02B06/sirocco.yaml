@@ -104,7 +104,7 @@ tasks:
       sockets_per_node: 1
       walltime: 00:05:00
       nodes: 1
-      path: prepare_input.sh
+      src: prepare_input.sh
       command: ./prepare_input.sh --pool={PORT::data_pool} --sst-ice={PORT::sst_ice_dir} --ozone={PORT::ozone_dir} --aero-kine={PORT::aero_kine_dir} --icon-input={PORT::icon_input}
   - icon:
       plugin: icon
@@ -144,7 +144,7 @@ tasks:
       plugin: shell
       sockets_per_node: 1
       computer: santis
-      path: post_proc.sh
+      src: post_proc.sh
       command: "uenv run /capstor/store/cscs/userlab/cws01/uenvs/climtools_25.2_v2.sqfs --view default -- post_proc.sh {PORT::stream}"
 
 data:
