@@ -70,27 +70,27 @@ cycles:
                   extpar_file: [extpar_file]
                   ifs2icon: [analysis_file]
                   bc_solar_sw: [solar_irradiance]
-                  restart_file:
+                  restart_in:
                     - restart_atm:
                         when:
                           after: *root_start_date
                         target_cycle:
                           lag: -P1D
                 outputs:
-                  latest_restart_file: [restart_atm]
+                  restart_out: [restart_atm]
                   output_streams: [atm_mon, atm_mon2d]
               ocean:
                 inputs:
                   dynamics_grid_file: [ocean_grid]
                   ocean_inistate: [ocean_init_state]
-                  restart_file:
+                  restart_in:
                     - restart_ocean:
                         when:
                           after: *root_start_date
                         target_cycle:
                           lag: -P1D
                 outputs:
-                  latest_restart_file: [restart_ocean]
+                  restart_out: [restart_ocean]
                   output_streams: [oce_3h, oce_day]
               land:
                 inputs:

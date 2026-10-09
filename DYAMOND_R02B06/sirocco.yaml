@@ -35,7 +35,7 @@ cycles:
                   extpar_file: [extpar_file]
                   ifs2icon: [analysis_file]
                 outputs:
-                  latest_restart_file: [first_restart]
+                  restart_out: [first_restart]
                   # output streams have to be specified even if unsued
                   output_streams: [stream_1, stream_2]
   - icon six hourly:
@@ -72,7 +72,7 @@ cycles:
                   dynamics_grid_file: [icon_grid]
                   extpar_file: [extpar_file]
                   ifs2icon: [analysis_file]
-                  restart_file:
+                  restart_in:
                     - first_restart:
                         when:
                           at: *six_hourly_start_date
@@ -84,7 +84,7 @@ cycles:
                         target_cycle:
                           lag: -PT6H
                 outputs:
-                  latest_restart_file: [restart_six_hourly]
+                  restart_out: [restart_six_hourly]
                   output_streams: [stream_1, stream_2]
         - post_proc:
             inputs:
