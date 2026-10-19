@@ -1,4 +1,4 @@
-# Temporary space to store some of the future CWP supported configurations
+# Sirocco configurations
 
 No official support yet, just giving access to early users.
 
