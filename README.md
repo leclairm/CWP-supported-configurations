@@ -1,6 +1,6 @@
 # Temporary space to store some of the future CWP supported configurations
 
-No official support, just giving access to early users.
+No official support yet, just giving access to early users.
 
 ## Sirocco uenv
 
